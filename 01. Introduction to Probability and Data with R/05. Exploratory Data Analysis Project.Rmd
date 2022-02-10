@@ -1,0 +1,163 @@
+---
+title: "Exploring the BRFSS data"
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+
+* * *
+
+## Part 1: Data
+
+The observations in the sample are collected through both landline telephone and cellphone-based surveys in the U.S., using Random Digit Dialing (RDD) techniques. The respondent data is then weighted, by a method called raking, using known characteristics of the state population that the observation belongs to. This helps account for non response bias and makes the sample more representative of the whole population.
+
+The data collection is done by random sampling, and therefore the results can be generalized to the study population. The raking method adjusts the sample data to be more representative of the population. Despite this, it could be argued that it is still not truly representative e.g. populations without landline or cell phone are not represented in the sample.
+
+The study is an observational study, and therefore can suggest correlation, but cannot infer causality. Only a controlled experiment with random assignment could infer causality.
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+
+Is there a relationship between whether an individual owns or rents their home and how much they earn?
+
+Owning a house is typically more expensive, so we would expect to observe that homeowners are higher earners than those who rent.
+
+Explanatory variable: Own or rent house (renthom1)  
+Response variable: Income level (income2)  
+
+
+**Research quesion 2:**
+
+Is there a relationship between gender and employment status?
+
+We can compare the proportions of males employed and the proportions of females employed. We might expect traditionally to find that a higher proportion of females are homemakers than with males. We will also model any impact observed from whether or not a person has children.  
+
+Explanatory variable: Respondent's sex (sex)  
+Response variable: Employment status (employ1)  
+Additional variable: Children calculated boolean (kids)  
+
+
+**Research quesion 3:**
+
+What effect does frequent smoking have on general health? Does an asthmatic condition impact this?
+
+Smoking has a detrimental effect on our lungs, so we would expect those who smoke frequently to have worse general health. We might expect to observe an asthmatic condition worsens the effect of smoking and therefore results in worse general health.
+
+
+Explanatory variable 1: Frequency Of Days Now Smoking (smokday2)  
+Response variable: General health (genhlth)  
+Additional variable: Ever Told Had Asthma (asthma3)
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+
+```{r question 1: Numerical Summary}
+brfss2013 %>% 
+  filter(renthom1 != "Other arrangement", !is.na(income2)) %>%
+  group_by(renthom1, income2) %>% 
+  summarise(count = n())
+```
+
+The above code filters the 2 variables being analyzed to only include the observations of interest. It removes the "NA" group from income2, and the "Other arrangement" group from renthom1 ("NA" is also removed from renthom1 by this action). It then shows a summary of these 2 categorical variables, which details a count of the occurrences of each category combination.
+
+
+```{r question 1: Visual Summary}
+levels(brfss2013$income2) <- gsub(" ", "\n", levels(brfss2013$income2))
+ggplot(subset(brfss2013, renthom1 != "Other arrangement" & !is.na(income2)), aes(x=renthom1, fill = income2)) +
+  geom_bar(position="dodge")
+```
+
+The above code produces a bar graph, which separately visualizes the distributions of home owners and renters across the different income levels.  
+For homeowners, we see a unimodal, strongly left skewed distribution that clearly shows that observations of homeowners are more likely to be high earners.  
+For observations of those who pay rent, the distribution is quite evenly distributed and almost resembles a uniform. There is a very small peak at the "less than $20,000" level, with the number of renters decreasing slightly at each level higher than that, with the 2 highest earning levels being notably smaller. Observations that rent seem less likely to be in the 2 highest earning levels, but other than that there doesn't appear to be any strong relationships between renters and how much they earn.
+
+**Research quesion 2:**
+
+```{r question 2: Numerical Summary}
+
+brfss2013 <- brfss2013 %>% 
+  mutate(kids = ifelse(is.na(children), NA, ifelse(children == 0, "Do not have children", "Have children")))
+
+brfss2013 %>% 
+  filter(!is.na(sex), !is.na(employ1), !is.na(kids)) %>%
+  group_by(sex, employ1, kids) %>%
+  summarise(count = n())
+
+```
+
+The above code creates a variable "kids" telling us whether the person has children or not. It then filters the 3 variables by removing the "NA" groups. It then shows a summary of the 3 variables, which details a count of the occurrences of each category combination.
+
+
+```{r question 2: Visual Summary}
+
+brfss2013$sex <- as.factor(brfss2013$sex)
+brfss2013$employ1 <- as.factor(brfss2013$employ1)
+brfss2013$kids <- as.factor(brfss2013$kids)
+ggplot(subset(brfss2013, !is.na(sex) & !is.na(employ1) & !is.na(kids)), aes(x=sex, fill = employ1)) +
+  geom_bar(position="dodge") + facet_wrap( ~ kids, ncol=2)
+
+```
+
+The above code produces a bar graph, which visualizes the distributions of males/females across the different employment statuses. The first graph considers people who do not have children, the second considers people with children.
+For both males and females, the "Employed for wages" group is very large. A major difference observed between different genders is the "homemaker" group, which is an extremely small group for males and a much larger proportion for females.
+Considering the children variable, we can see that most employment status groups are similar proportions, except the "retired" group which is significantly larger for people who do not have children.
+
+
+**Research quesion 3:**
+
+```{r question 3: Numerical Summary}
+
+brfss2013 %>% 
+  filter(!is.na(smokday2), !is.na(asthma3),!is.na(genhlth)) %>%
+  group_by(smokday2, asthma3, genhlth) %>%
+  summarise(count = n())
+
+```
+
+The above code filters the 3 variables by removing the "NA" groups. It then shows a summary of the 3 variables, which details a count of the occurrences of each category combination.
+
+```{r question 3: Visual Summary}
+
+brfss2013$stopsmk2 <- as.factor(brfss2013$stopsmk2)
+brfss2013$usenow3 <- as.factor(brfss2013$usenow3)
+brfss2013$genhlth <- as.factor(brfss2013$genhlth)
+ggplot(subset(brfss2013, !is.na(smokday2) & !is.na(asthma3) & !is.na(genhlth)), aes(x=smokday2, fill = genhlth)) +
+  geom_bar(position="dodge") +
+  facet_wrap( ~ asthma3, ncol=2)
+
+```
+
+The above code produces a bar graph, which visualizes the distributions of frequency smoking across the different general health categories. The first graph considers people who have had asthma, the second considers people who have never had asthma.
+For non asthmatics, we see a slight skew towards better general health, the skew is strong for the "not at all" smoking category, and weaker for the "every day" smoking category which is almost normally distributed. Note that all non-asthmatic smoking categories have a higher proportion of "excellent" health than "poor" health. 
+For asthmatics we see a slight skew towards worse general health in the "every day" category. Note that all asthmatic smoking categories have a higher proportion of "poor" health than "excellent" health.
+
+
+**References:**
+
+BRFSS website: http://www.cdc.gov/brfss/ (05/07/2020)  
+Diez, D., Barr, C., Cetinkaya-Rundel, M. (2017). OpenIntro Statistics Third Edition.
