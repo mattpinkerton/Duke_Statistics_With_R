@@ -1,6 +1,6 @@
 # Duke University Statistics with R Specialization
 
-![image](https://user-images.githubusercontent.com/85677826/153495601-652b2080-1de4-4590-bc6e-baf261d0d217.png =250x250) ![image](https://user-images.githubusercontent.com/85677826/153495667-c2757343-349d-455d-a343-af59a6d2bf7f.png =250x250)
+<img src="https://user-images.githubusercontent.com/85677826/153495601-652b2080-1de4-4590-bc6e-baf261d0d217.png" width="100" height="100"> <img src="https://user-images.githubusercontent.com/85677826/153495667-c2757343-349d-455d-a343-af59a6d2bf7f.png" width="100" height="100">
 
 This is a repository for resources completed as part of the Duke University Statistics with R Specialization.
 
