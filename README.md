@@ -4,7 +4,7 @@
 
 This is a repository for resources completed as part of the Duke University Statistics with R Specialization.
 
-**Course Links:**\
+**Course Link:**\
 https://www.coursera.org/specializations/statistics
 
 **Modules:**\
