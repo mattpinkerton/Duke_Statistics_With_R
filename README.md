@@ -12,7 +12,7 @@ https://www.coursera.org/specializations/statistics
 02: Inferential Statistics\
 03: Linear Regression & Modeling\
 04: Bayesian Statistics\
-05: Statistics with R Capstone\
+05: Statistics with R Capstone
 
 **Instructors:**\
 Mine Çetinkaya-Rundel, David Banks, Merlise A Clyde, Colin Rundel
