@@ -6,14 +6,14 @@
 
 This is a repository for resources completed as part of the Duke University Statistics with R Specialization.
 
-In this Specialization, learners developed and honed their skills using R
-to produce data visualizations. Learners created a range of figures,
-from simple figures like histograms and scatter plots to more complex
-figures like alluvial diagrams and heat maps. Learners incorporated
-these visualization into reproducible reports and data dashboards.
-Learners completed a Capstone at the end of the Specialization to
-apply their knowledge and skills in an individual data visualization
-project.
+To be successful in this specialization, learners have analyzed and
+visualized data in R and created reproducible data analysis reports,
+demonstrated a conceptual understanding of the unified nature of
+statistical inference, performed frequentist and Bayesian statistical
+inference and modeling to understand natural phenomena and make
+data-based decisions, communicated statistical results correctly,
+effectively, and in context without relying on statistical jargon, critiqued
+data-based claims and evaluated data-based decisions.
 
 **Course Link:**\
 https://www.coursera.org/specializations/statistics
