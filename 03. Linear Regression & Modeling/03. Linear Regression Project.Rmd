@@ -1,0 +1,314 @@
+---
+title: "Modeling and prediction for movies"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(tidyr)
+library(GGally)
+```
+
+### Load data
+
+```{r load-data}
+load("movies.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+It is simply stated that the boss has acquired the data and that a random sample of movies is selected from the population of movies on IMDB & Rotten Tomatoes. The sampling methods are not clearly stated and cannot be further inquired within this hypothetical scenario, so we must accept this to be true. 
+
+As the sample is random, any of the statistical results can be generalized to the entire population of movies on IMDB & Rotten Tomatoes. 
+
+The study is an observational study, and therefore can suggest correlation, but cannot infer causality. Only a controlled experiment with random assignment could infer causality.
+
+* * *
+
+## Part 2: Research question
+
+Research question:
+Which set of variables available provide the best prediction of IMDB movie rating?
+
+This could be useful information for the movie production company, as a strong indicator of how popular the movie is/will be.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+We are interested in the association between the variable imdb_rating and other variables.
+
+We might expect there to be a relationship between imdb rating and ratings on rotten tomatoes. The first plot checks the relationship with the rotten tomatoes critics rating, the second plot checks the relationship with the rotten tomatoes audience rating. With both plots, we see a positive linear relationship. The third plot checks for a relationship between the rotten tomatoes critics rating and audience rating. As expected, there is also a linear relationship here. To avoid colinearity, we will only consider one of these variables for our model. We will include the audience rating as it has a stronger relationship and is a better predictor of imdb rating.
+
+```{r}
+
+  ggplot(data = movies, aes(x = critics_score, y = imdb_rating)) +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = FALSE)
+  
+  movies %>% 
+  summarise(cor(critics_score, imdb_rating))
+  
+  ggplot(data = movies, aes(x = audience_score, y = imdb_rating)) +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = FALSE)
+  
+  movies %>% 
+  summarise(cor(audience_score, imdb_rating))
+  
+  ggplot(data = movies, aes(x = critics_score, y = audience_score)) +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = FALSE)
+  
+  movies %>% 
+  summarise(cor(critics_score, audience_score))
+  
+```
+
+Rotten tomatoes audience rating will be included in our model and we will do forward selection to identify other variables that add value to the model.
+
+We will first clean the dataset by removing variables that are similar or not meaningful. We will update yes/no responses to binary 1s and 0s to be used by the linear model. We will combine the best_actor_win and best_actress_win into one variable: best_act_win. We will finally remove any NAs from the data.
+
+The final variables to consider for our model to predict imdb_rating are: audience_score, runtime, thtr_rel_year, thtr_rel_month, imdb_num_votes, best_pic_nom, best_act_win, best_dir_win, top200_box.
+
+
+```{r}
+
+  movies <- movies %>%
+  mutate(best_act_win = ifelse(best_actor_win == "yes", 1, ifelse(best_actress_win == "yes", 1, 0))) %>%
+  mutate(best_pic_nom = ifelse(best_pic_nom == "yes", 1, 0)) %>%
+  mutate(best_dir_win = ifelse(best_dir_win == "yes", 1, 0)) %>%
+  mutate(top200_box = ifelse(top200_box == "yes", 1, 0)) %>%
+  na.omit(movies_sub)
+  
+  movies <- select(movies, imdb_rating, audience_score, runtime, thtr_rel_year, thtr_rel_month, imdb_num_votes, best_pic_nom, best_act_win, best_dir_win, top200_box)
+
+```
+
+
+* * *
+
+## Part 4: Modeling
+
+The model will predict the variable imdb_rating. We have removed variables that are similar or not meaningful. We have decided that rotten tomatoes audience rating will be included in our model as it has a strong relationship with imdb_rating. We can do forward selection to identify other variables that add value to the model by improving the adjusted R-squared correlation.
+
+### Forward selection round 1
+
+```{r}
+  
+model_1 = lm(imdb_rating ~ audience_score, data = movies) #baseline model
+summary(model_1)
+model_2 = lm(imdb_rating ~ audience_score + runtime, data = movies)
+summary(model_2)
+model_3 = lm(imdb_rating ~ audience_score + thtr_rel_year, data = movies)
+summary(model_3)
+model_4 = lm(imdb_rating ~ audience_score + thtr_rel_month, data = movies)
+summary(model_4)
+model_5 = lm(imdb_rating ~ audience_score + imdb_num_votes, data = movies)
+summary(model_5)
+model_6 = lm(imdb_rating ~ audience_score + best_pic_nom, data = movies)
+summary(model_6)
+model_7 = lm(imdb_rating ~ audience_score + best_act_win, data = movies)
+summary(model_7)
+model_8 = lm(imdb_rating ~ audience_score + best_dir_win, data = movies)
+summary(model_8)
+model_9 = lm(imdb_rating ~ audience_score + top200_box, data = movies)
+summary(model_9)
+
+```
+
+Using only audience_score, the model gives an adjusted R-squared of 0.7401.
+
+By also including runtime, the model gives an adjusted R-squared of 0.7554. Model_2 is the best model with the strongest predictive power. We will do another round to see if adding another variable improves the model.
+
+### Forward selection round 2
+
+```{r}
+
+model_10 = lm(imdb_rating ~ audience_score + runtime + thtr_rel_year, data = movies)
+summary(model_10)
+model_11 = lm(imdb_rating ~ audience_score + runtime + thtr_rel_month, data = movies)
+summary(model_11)
+model_12 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes, data = movies)
+summary(model_12)
+model_13 = lm(imdb_rating ~ audience_score + runtime + best_pic_nom, data = movies)
+summary(model_13)
+model_14 = lm(imdb_rating ~ audience_score + runtime + best_act_win, data = movies)
+summary(model_14)
+model_15 = lm(imdb_rating ~ audience_score + runtime + best_dir_win, data = movies)
+summary(model_15)
+model_16 = lm(imdb_rating ~ audience_score + runtime + top200_box, data = movies)
+summary(model_16)
+
+```
+
+By further including imdb_num_votes, the model gives an adjusted R-squared of 0.7581. Model_12 is the best model with the strongest predictive power. We will do another round to see if adding another variable improves the model.
+
+### Forward selection round 3
+
+```{r}
+model_17 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + thtr_rel_year, data = movies)
+summary(model_17)
+model_18 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + thtr_rel_month, data = movies)
+summary(model_18)
+model_19 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_pic_nom, data = movies)
+summary(model_19)
+model_20 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_act_win, data = movies)
+summary(model_20)
+model_21 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_dir_win, data = movies)
+summary(model_21)
+model_22 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + top200_box, data = movies)
+summary(model_22)
+```
+
+By further including best_dir_win, the model gives an adjusted R-squared of 0.7582. Model_21 is the best model with the strongest predictive power. We will do another round to see if adding another variable improves the model.
+
+### Forward selection round 4
+
+```{r}
+
+model_23 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_dir_win + thtr_rel_year, data = movies)
+summary(model_23)
+model_24 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_dir_win + thtr_rel_month, data = movies)
+summary(model_24)
+model_25 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_dir_win + best_pic_nom, data = movies)
+summary(model_25)
+model_26 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_dir_win + best_act_win, data = movies)
+summary(model_26)
+model_27 = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_dir_win + top200_box, data = movies)
+summary(model_27)
+
+```
+
+Including more variables has not improved the model. Including thtr_rel_month or best_act_win yields a model with the same adjusted R-squared. But as they add no more value to the model, we will exclude them to have a parsimonious model.
+
+The final model is:
+
+imdb_rating = 3.102e+00 + 4.363e-02[audience_score] + 5.909e-03[runtime] + 5.504e-07[imdb_num_votes] + 9.871e-02[best_dir_win]
+
+### Diagnostics:
+
+First, we will check the linear relationships between each explanatory variable to the response variable. From the four plots below, we can see that the residuals for all variables are randomly spread around zero on the y axis.
+
+```{r}
+
+model_final = lm(imdb_rating ~ audience_score + runtime + imdb_num_votes + best_dir_win, data = movies)
+plot(model_final$residuals ~ movies$audience_score)
+plot(model_final$residuals ~ movies$runtime)
+plot(model_final$residuals ~ movies$imdb_num_votes)
+plot(model_final$residuals ~ movies$best_dir_win)
+
+```
+
+
+Next we will check that the residuals of the model are nearly normal with mean zero. We see in the histogram below that there is some skew. There is a longer left tail because we have some outliers, but we can see that the residuals are approximately centered at zero.
+
+
+```{r}
+
+hist(model_final$residuals)
+
+```
+
+Next we will check for constant variability of residuals. From the below plot of residuals vs the fitted model, we can see constant variability in the residuals throughout.
+
+```{r}
+
+plot(model_final$residuals - model_final$fitted)
+
+```
+
+Lastly, we will check that the residuals are independent. From the residuals plot below, we can see no pattern or trends, there =fore we can assume independency.
+
+```{r}
+
+plot(model_final$residuals)
+
+```
+
+A final check for colinearity between the final model variables is shown below. We can see that there is no strong linear relationships between the explanatory variables; the only particularly strong linear relationship is between imdb_rating and audience_score
+
+```{r}
+
+movies_final <- select(movies, imdb_rating, audience_score, runtime, imdb_num_votes, best_dir_win)
+ggpairs(movies_final, columns = 1:5)
+
+```
+
+
+
+* * *
+
+## Part 5: Prediction
+
+2016 movie: The Accountant
+
+audience_score: 76  
+Runtime: 128  
+imdb_num-votes: 260095  
+Best_dir_win: 0  
+
+References:  
+www.imdb.com  
+www.rottentomatoes.com  
+
+```{r}
+
+#model prediction
+3.102e+00 + 4.363e-02*76 + 5.909e-03*128 + 5.504e-07*260095 + 9.871e-02*0
+
+```
+When we determined the final model, we calculated a residual standard error of 0.5284 on 614 degrees of freedom. That is to say, based on the model parameters, we can be 95% confident that the movie The Accountant has an imdb rating between 7.317388 +/- 0.5284. The actual imdb rating is 7.3, so the model has correctly predicted the imdb rating within the margin of error.
+
+
+We can do an ANOVA test to find how much of the model's variability is explained by the model parameters
+
+```{r}
+
+anova(model_final)
+
+```
+
+With the below calculations of the ANOVA output, we calculate an R-squared of ~0.76. i.e. 76% of the variability in the model is explained by the parameters. ~0.74% of the variability is explained by audience_score alone.
+
+```{r}
+
+#audience score
+(528.59)/(528.59+11.2+2.2+0.36+171.45)
+
+#best director win
+(0.36)/(528.59+11.2+2.2+0.36+171.45)
+
+#R-squared
+(528.59+11.2+2.2+0.36)/(528.59+11.2+2.2+0.36+171.45)
+
+```
+
+* * *
+
+## Part 6: Conclusion
+
+We used the variables available to produce a linear regression model that predicts the imdb rating for a given movie. The model explains ~0.74% of the variability in the response variable. We tested the model on a movie outside of the dataset it was trained on, and the imdb rating was accurately predicted within the expected margin of error.
+
+To answer the research question, the variables that we have found to provide the best prediction of IMDB movie rating are: audience_rating, runtime, imdb_num_votes, best_dir_win. We can explain to the boss how much each of these variables contribute to the model based on the ANOVA output.
+
+Further testing of movies outside of the original dataset should be conducted to validate the model. With further variables considered, it could be possible to produce a linear model with a better fit
+
+Although we have included the variable best_dir_win as it improved the fit of the model, it only explains ~0.05% of the response variable. It could be argued that a more parsimonious model would exclude this variable as the improvement isn't significant. 
+
+
+***
