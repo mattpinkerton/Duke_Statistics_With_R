@@ -1,0 +1,371 @@
+---
+title: "Bayesian Modeling and prediction for movies"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(BAS)
+library(broom)
+library(MASS)
+library(GGally)
+```
+
+### Load data
+
+```{r load-data}
+load("movies.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+It is simply stated that the boss has acquired the data and that a random sample of movies is selected from the population of movies on IMDB & Rotten Tomatoes. The sampling methods are not clearly stated and cannot be further inquired within this hypothetical scenario, so we must accept this to be true. 
+
+As the sample is random, any of the statistical results can be generalized to the entire population of movies on IMDB & Rotten Tomatoes. 
+
+The study is an observational study, and therefore can suggest correlation, but cannot infer causality. Only a controlled experiment with random assignment could infer causality.* * *
+
+## Part 2: Data manipulation
+
+The mutate function from the dplyr package is used below to create 5 new variables.
+
+```{r}
+
+  movies <- movies %>%
+  mutate(feature_film = ifelse(title_type == "Feature Film", "yes", "no")) %>%
+  mutate(drama = ifelse(genre == "Drama", "yes", "no")) %>%
+  mutate(mpaa_rating_R = ifelse(mpaa_rating == "R", "yes", "no")) %>%
+  mutate(oscar_season = ifelse(thtr_rel_month == "10" | thtr_rel_month == "11" | thtr_rel_month == "12", "yes", "no")) %>%
+  mutate(summer_season = ifelse(thtr_rel_month == "5" | thtr_rel_month == "6" | thtr_rel_month == "7" | thtr_rel_month == "8", "yes", "no"))
+  
+```
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+Firstly we will plot a histogram of audience score to understand the distribution. The distribution is left skewed, with the most common audience scores around 80, and a small peak around 50 also. We can see from the numerical summary that the range of scores is 11 to 97.
+
+```{r}
+  ggplot(data = movies, aes(x = audience_score)) +
+  geom_histogram(binwidth=5, color="black") +
+  labs(title="Audience Score histogram plot")
+
+  summary(movies$audience_score)
+```
+
+Next we will look at the relationships between each of the new variables, and the response variable audience_score.
+
+### Feature Film
+
+The below plot shows the histogram distributions of audience score, split by the feature film variable. We can see that most films in the sample are categorised as feature films. Non feature films tend to have scored high, with some outliers scoring low. The following box plot confirms that the median non feature film scores more highly than the median feature film, and highlights the non feature film outliers. Lastly, the numerical summary highlights that the feature film dataset is much larger than the non feature film dataset, so we should be careful in drawing conclusions.
+
+```{r}
+
+  ggplot(data = movies, aes(x = audience_score, fill = feature_film)) +
+  geom_histogram(binwidth=5, color="black") +
+  facet_grid(feature_film ~ .) +
+  labs(title="Audience Score histogram plot - split by Feature Film")
+
+  ggplot(data = movies, aes(x = feature_film, y = audience_score, fill = feature_film)) +
+  geom_boxplot() +
+  labs(title="Audience Score box plot - split by Feature Film")
+  
+  movies %>%
+  group_by(feature_film) %>% 
+  summarise(count = n())
+
+```
+
+### Drama Film
+
+The below plot shows the histogram distributions of audience score, split by the drama variable. We can see that approximately half the data are drama films. Drama films more obviously follow a left skew distribution, whereas non drama films are more evenly spread with no obvious peak. The box plot shows that the median drama film scored more highly than the median non drama film. Both categories have similar range, with non drama films having more data closely centered to the median. The numerical summary confirms that there are similar amounts of drama movies as non drama movies in the sample.
+
+```{r}
+
+  ggplot(data = movies, aes(x = audience_score, fill = drama)) +
+  geom_histogram(binwidth=5, color="black") +
+  facet_grid(drama ~ .) +
+  labs(title="Audience Score histogram plot - split by Drama Film")
+
+  ggplot(data = movies, aes(x = drama, y = audience_score, fill = drama)) +
+  geom_boxplot() +
+  labs(title="Audience Score box plot - split by Drama Film")
+  
+  movies %>%
+  group_by(drama) %>% 
+  summarise(count = n())
+  
+```
+
+### Rated R Film
+
+The below plot shows the histogram distributions of audience score, split by the mpaa_rating_R variable. There is not noticeably huge differences between the histogram and box plots, suggesting that this variable may not be a good indicator for audience score. The numerical summary confirms that there are similar amounts of R rated movies as non R rated movies in the sample.
+
+```{r}
+
+  ggplot(data = movies, aes(x = audience_score, fill = mpaa_rating_R)) +
+  geom_histogram(binwidth=5, color="black") +
+  facet_grid(mpaa_rating_R ~ .) +
+  labs(title="Audience Score histogram plot - split by R rated")
+
+  ggplot(data = movies, aes(x = mpaa_rating_R, y = audience_score, fill = mpaa_rating_R)) +
+  geom_boxplot() +
+  labs(title="Audience Score box plot - split by R rated")
+  
+  movies %>%
+  group_by(mpaa_rating_R) %>% 
+  summarise(count = n())
+  
+```
+
+### Oscar Season Film
+
+The below plot shows the histogram distributions of audience score, split by the oscar season variable. As perhaps expected, we can see that more of the data were released outside of oscar season, with oscar season being a smaller proportion of the year. There are not huge differences in the distributions; we can see with oscar season movies, there is a trough at scores just over 50 that is not evident in the non oscar season movies. There is a peak in the non oscar season movies around a score of 80 that is not evident in oscar season movies.The boxplot shows us that the median oscar season movie slightly outscored the median non oscar season movie, but this difference may not be significant. The numerical summary confirms the number of oscar season movies in the sample is less than thenumber of non oscar season movies.
+
+```{r}
+
+  ggplot(data = movies, aes(x = audience_score, fill = oscar_season)) +
+  geom_histogram(binwidth=5, color="black") +
+  facet_grid(oscar_season ~ .) +
+  labs(title="Audience Score histogram plot - split by Oscar season")
+
+  ggplot(data = movies, aes(x = oscar_season, y = audience_score, fill = oscar_season)) +
+  geom_boxplot() +
+  labs(title="Audience Score box plot - split by Oscar season")
+  
+  movies %>%
+  group_by(oscar_season) %>% 
+  summarise(count = n())
+  
+```
+
+### Summer Season Film
+
+The below plot shows the histogram distributions of audience score, split by the summer season variable. As perhaps expected, we can see that more of the data were released outside of summer season, with summer season being a smaller proportion of the year. The most noticeable difference in the distributions is that the peak in scores around 80 is evident in the non summer season movies, but not evident in the summer season movies.The box plots are very similar, ad the numerical summary confirms that we have more than twice as much films in the sample released outside of the summer season. 
+
+```{r}
+
+  ggplot(data = movies, aes(x = audience_score, fill = summer_season)) +
+  geom_histogram(binwidth=5, color="black") +
+  facet_grid(summer_season ~ .) +
+  labs(title="Audience Score histogram plot - split by Summer season")
+
+  ggplot(data = movies, aes(x = summer_season, y = audience_score, fill = summer_season)) +
+  geom_boxplot() +
+  labs(title="Audience Score box plot - split by Summer season")
+  
+  movies %>%
+  group_by(summer_season) %>% 
+  summarise(count = n())
+  
+```
+
+
+* * *
+
+## Part 4: Modeling
+
+### The Model
+  
+First we will reduce the dataset to those variables that we will consider for the model. We will remove any rows of data with N/A entries. We will first build a model with all variables included as exlanatory variables, excluding of course the response variable audience_score. The Bayesian Information Criterion (BIC) output below gives ~ 4934.
+  
+  
+```{r}
+
+  movies <- dplyr::select(movies, audience_score, feature_film, drama, runtime, mpaa_rating_R, thtr_rel_year, oscar_season, summer_season, imdb_rating, imdb_num_votes, critics_score, best_pic_nom, best_pic_win, best_actor_win, best_actress_win, best_dir_win, top200_box)
+
+movies <- na.omit(movies) 
+
+model_audience_score_full <- lm(audience_score ~ . - audience_score, data = movies)
+
+tidy(model_audience_score_full)
+BIC(model_audience_score_full)
+
+```
+
+To minimise the BIC and thus improve the model, we will use the stepAIC function to iterate through the model removing variables to improve the fit of the model. Below we can see that the function discovers the best model has the explanatory variables:  
+  
+runtime  
+critics_score  
+imdb_rating  
+  
+This model gives a BIC of ~ 4872 which we can see is less than the base model. We can also see from the model summary that it gives an adjusted R^2 of 0.7538, which is strong correlation under the frequentist approach.
+
+```{r}
+
+n = length(movies$audience_score)
+k = log(n)
+
+movies_full_step = stepAIC(model_audience_score_full, k=k, data =movies)
+summary(movies_full_step)
+BIC(movies_full_step)
+
+```
+
+### Bayesian Model Averaging
+
+We will use bayesian model averaging to confirm our model by comparing multiple plausible models. We can see below the top 5 probable models. Model 1 is the model we have previously derived. We can see that imdb_rating and critics_scores are both strong predictors, and are included in all 5 models. Interestingly, model 5 gives a stronger R^2 than model 1 by also including mpaa_rating_R, but it is not a significant improvement, and it is best to have less variables as a parsimonious model. So we will stick with model 1.
+
+```{r}
+
+bma_movies <- bas.lm(audience_score ~ . -audience_score, data = movies,
+                   prior = "BIC", 
+                   modelprior = uniform())
+
+bma_movies
+
+summary(bma_movies)
+
+```
+
+### Model Diagnostics
+
+Using the model coefficients summarised below, the actual model can be calculated as:
+
+Audience_score =  -33.28320569 + 14.98076157(imdb_rating) + 0.07035672(critics_score) - 0.05361506(runtime)
+
+We calculate the credible intervals for each variable and also plot the posterior distributions of the coefficients of each of our 3 variables in our model.
+
+We use prediction with the BAS functioning to predict the variables that should be included based on "best predictive model", "Highest probability model", and "Median probability model". The BPM & HPM confirm our model selection, whereas MPM excludes the runtime variable.
+
+
+```{r}
+
+coef_movies <- coefficients(bma_movies)
+coef_movies
+confint(coef_movies, subset = c(4,9,11))
+
+plot(coef_movies, subset = c(4,9,11), ask = FALSE)
+
+BPM_pred_movies <- predict(bma_movies, estimator = "BPM", se.fit = TRUE)
+variable.names(BPM_pred_movies)
+
+HPM_pred_movies <- predict(bma_movies, estimator = "HPM")
+variable.names(HPM_pred_movies)
+
+MPM_pred_movies <- predict(bma_movies, estimator = "MPM")
+variable.names(MPM_pred_movies)
+
+```
+ 
+Next, we will check the linear relationships between each explanatory variable to the response variable. From the three plots below, we can see that the residuals for all variables are randomly spread around zero on the y axis.
+
+```{r}
+
+model_final = lm(audience_score ~ imdb_rating + critics_score + runtime, data = movies)
+plot(model_final$residuals ~ movies$imdb_rating)
+plot(model_final$residuals ~ movies$critics_score)
+plot(model_final$residuals ~ movies$runtime)
+
+```
+
+
+Next we will check that the residuals of the model are nearly normal with mean zero. We see in the histogram below that there is some skew. There is a longer right tail because we have some outliers, but we can see that the residuals are approximately centered at zero.
+
+
+```{r}
+
+hist(model_final$residuals)
+
+```
+
+Next we will check for constant variability of residuals. From the below plot of residuals vs the fitted model, we can see constant variability in the residuals throughout.
+
+```{r}
+
+plot(model_final$residuals - model_final$fitted)
+
+```
+
+Lastly, we will check that the residuals are independent. From the residuals plot below, we can see no pattern or trends, therefore we can assume independency.
+
+```{r}
+
+plot(model_final$residuals)
+
+```
+
+A final check for colinearity between the final model variables is shown below. As expected, audience_score has linear relationships with imdb_rating and critics_score. However, there is also a linear relationship between imdb_rating and critics_score. This is evidence of colinearity, and perhaps a better model would only include one of these explanatory variables.
+
+```{r}
+
+movies_final <- dplyr::select(movies, audience_score, imdb_rating, critics_score, runtime)
+ggpairs(movies_final, columns = 1:4)
+
+```
+  
+
+* * *
+
+## Part 5: Prediction
+
+2016 movie: London has fallen
+
+imdb_rating: 5.9  
+critics_score: 28  
+Runtime: 99  
+
+References:  
+www.imdb.com  
+www.rottentomatoes.com  
+
+```{r}
+
+#model prediction
+14.98076157*5.9 + 0.0703567251*28 - 0.05361506*99 -33.28320569
+
+```
+
+The actual audience score is 51, so the model has accurately predicted the imdb rating within a credible interval, which was calculated previously for each variable contributing to the model.
+
+
+We can do an ANOVA test to find how much of the model's variability is explained by the model parameters
+
+```{r}
+
+anova(model_final)
+
+```
+
+With the below calculations of the ANOVA output, we calculate an R-squared of ~0.75. i.e. 75% of the variability in the model is explained by the parameters. ~0.75% of the variability is explained by imdb_rating alone.
+
+```{r}
+
+#imdb_rating
+(198782)/(198782+1167+653+65126)
+
+#critics_score
+(1167)/(198782+1167+653+65126)
+
+#runtime
+(653)/(198782+1167+653+65126)
+
+#R-squared
+(198782+1167+653)/(198782+1167+653+65126)
+
+```
+
+* * *
+
+## Part 6: Conclusion
+
+We used the variables indicated to produce a bayesian linear regression model that predicts the audience score for a given movie. The model explains ~0.75% of the variability in the response variable. We tested the model on a movie outside of the dataset it was trained on, and the imdb rating was accurately predicted within the expected credible interval.
+
+To answer the research question, the variables that we have found to provide the best prediction of audience score rating are: imdb rating, critics score, runtime. We can explain to the boss how much each of these variables contribute to the model based on the ANOVA output.
+
+Further testing of movies outside of the original dataset should be conducted to validate the model. With further variables considered, it could be possible to produce a linear model with a better fit.
+  
