@@ -1,0 +1,135 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+```{r load-data}
+load("gss.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+The GSS uses computer assisted personal interviewing, the sampling areas used are either Standard Metropolitan Statistical areas or non-metropolitan counties from NORC's master sample; these areas are stratified by region, race, age before selection. Within each area, block groups are identified and stratified to use in cluster sampling. Within each cluster, samples are taken from the north-west corner inward until quotas are met.
+
+Sampling within cluster groups can be considered fairly random, with blocking measures taken at higher levels and by quotas to ensure the distributions of key variables (e.g. gender, sex, race) is similar to that of the US census data. Therefore, this data collected from numerous areas in the US can be generalized to the US population.
+
+The study is an observational study, and therefore can suggest correlation, but cannot infer causality. Only a controlled experiment with random assignment could infer causality.
+
+* * *
+
+## Part 2: Research question
+
+**Research question:**  
+Are females afraid of walking alone at night in their local neighborhood?
+
+We may see that females are afraid of walking alone at night, more so than males would be. This helps us discover if females feel safe in their local neighborhoods. Further research could analyze this split by geographical locations.
+
+Explanatory variable: RESPONDENTS SEX (SEX)  
+Response variable: Afraid to walk at night in neighborhood (FEAR)  
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+
+```{r}
+femaleFear <- gss %>% 
+  filter(sex == "Female", !is.na(fear))
+
+femaleFear %>%
+  group_by(sex, fear) %>% 
+  summarise(count = n())
+```
+
+The above code filters the sex variable to only consider females, and the fear variable to removes the “NA” entries. It then shows a summary of the fear variable for females, detailing a count of the occurrences of each category. We see that there are more total observations that females are afraid to walk alone at night. We will further test if this is a statistically significant amount.
+
+```{r}
+fearFactor <- as.factor(femaleFear$fear)
+ggplot(femaleFear, aes(x=fear)) + geom_bar()
+```
+
+The above code produces a bar graph of the count of females that answered yes/no that females are afraid to walk alone at night. We will further test if this is statistically significant.
+
+* * *
+
+## Part 4: Inference
+
+**Confidence Interval:**
+
+*Conditions for central limit theorem:*
+
+1. Independence Check:
+We discussed in part 1 that the observations are from a simple random sample. The dataset consists of fewer observations than 10% of the US population, so they can be assumed to be independent.
+
+2. Sample size / skew check (success-failure check):
+The sample size "n" of our sub dataset "femaleFear" is 19,117 and we observe 10,591 successes and 8,526 failures.  
+From the data, we see that the observed success rate (p-hat) is ~55.4%.  
+There are at least 10 successes and 10 failures
+
+Both conditions pass so we can assume a nearly normal distribution as defined by the central limit theorem.
+
+We will construct a 95% confidence interval for the proportion of females that are afraid to walk alone at night in their local neighborhood.
+
+
+```{r}
+inference(y = fear, data = femaleFear, statistic = "proportion", type = "ci", method = "theoretical", success = "Yes")
+```
+
+We are 95% confident that 54.7% to 56.1% of all American females are afraid to walk alone at night in their local neighborhood.
+
+
+**Hypothesis testing:**
+
+H0: Females are not afraid of walking alone at night in their local neighborhood (p = 0.5)  
+HA: Females are afraid of walking alone at night in their local neighborhood (p > 0.5)  
+
+*Conditions for central limit theorem:*
+
+1. Independence Check:
+Similar to the check for the confidence interval test, we can assume independence.
+
+2. Sample size / skew check (success-failure check):
+From the data, we see that the observed success rate (p-hat) is 0.554
+The test proportion "p" used in our hypotheses will be 0.5
+np = 19,117 * 0.5 = 9558.5
+This gives more than 10 successes and 10 failures
+
+Both conditions pass so we can assume a nearly normal distribution as defined by the central limit theorem.
+
+
+```{r}
+inference(y = fear, data = femaleFear, statistic = "proportion", type = "ht", null = 0.5, alternative = "greater", method = "theoretical", success = "Yes")
+```
+
+The hypothesis test yields a large test statistic of 15.0231, and therefore a small p value of < 0.0001. The probability that the null hypothesis is true, and observing results at least as extreme as the dataset is almost 0. Therefore, we reject the null hypothesis.
+
+**Conclusion**
+
+From our hypothesis testing results, we can accept the alternative hypothesis. That is, that females are afraid of walking alone at night in their local neighborhood.As mentioned previously, further research could be done to analyze this response by geographical location to see if this result varies across different regions in America.
+
+**References:**
+
+BRFSS website:  http://gss.norc.org/ (10/10/2020)  
+Diez, D., Barr, C., Cetinkaya-Rundel, M. (2017). OpenIntro Statistics Third Edition.
+
