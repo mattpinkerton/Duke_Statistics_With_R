@@ -1,0 +1,198 @@
+---
+title: "Peer Assessment I"
+output:
+  html_document: 
+    pandoc_args: [
+      "--number-sections",
+    ]
+---
+
+
+First, let us load the data and necessary packages:
+
+```{r load, message = FALSE}
+load("ames_train.Rdata")
+library(MASS)
+library(dplyr)
+library(ggplot2)
+```
+
+#
+Make a labeled histogram (with 30 bins) of the ages of the houses in the data set, and describe the distribution.
+
+
+```{r Q1}
+
+ames_train <- ames_train %>%
+  mutate(age = 2010 - Year.Built)
+
+ggplot(ames_train,aes(x=age))+geom_histogram(bins=30,color="black",fill="light blue")+labs(title="Distribution of ages of the houses",x="Age of house",y="Frequency")+theme_bw() 
+
+```
+
+
+* * *
+
+As the data is for properties sold from 2006-2010, we have used 2010 as "today's date" to calculate age of house.  
+
+We can see an overall right skew in the data, with more houses being newer rather than older. This is particularly apparent due to the second bucket in the distribution being very large. There are some smaller peaks and troughs through the data making it multi-modal, but the distribution gradually tapers off as we consider older houses.  
+
+
+* * *
+
+
+#
+The mantra in real estate is "Location, Location, Location!" Make a graphical display that relates a home price to its neighborhood in Ames, Iowa. Which summary statistics are most appropriate to use for determining the most expensive, least expensive, and most heterogeneous (having the most variation in housing price) neighborhoods? Report which neighborhoods these are based on the summary statistics of your choice. Report the value of your chosen summary statistics for these neighborhoods.
+
+
+```{r Q2}
+
+ggplot(ames_train,aes(x=Neighborhood,y=price))+geom_boxplot()+theme(axis.text.x=element_text(angle=90))
+
+q2 <- ames_train %>%
+  group_by(Neighborhood) %>%
+  summarise(mean=mean(price),
+            sd=sd(price),
+            min = fivenum(price)[1],
+            Q1 = fivenum(price)[2],
+            median = fivenum(price)[3],
+            Q3 = fivenum(price)[4],
+            max = fivenum(price)[5])
+
+q2
+
+```
+
+
+* * *
+
+For each neighborhood, we have calculated the standard 5 point summary statistics, as well as the mean and standard deviation.  
+
+Most expensive: We can see that NridgHt has the largest "max" price of 615000, but StoneBr has the largest median price of 340691.5. Therefore, on average, StoneBr is the most expensive neighbourhood.  
+
+Least expensive: We can see that OldTown has the smallest "min" price of 12789, but MeadowV has the smallest median price of 85750. Therefore, on average, MeadowV is the least expensive neighbourhood.  
+
+Most heterogeneous: Both NridgHt and StoneBr have large variation in price; NridgHt has the largest range of prices, and StoneBr has the largest interquartile range. Using standard deviation as our measure, StoneBr is the most heterogenous with a standard deviation of 123459.10.  
+
+* * *
+
+# 
+
+Which variable has the largest number of missing values? Explain why it makes sense that there are so many missing values for this variable.
+
+```{r Q3}
+
+colSums(is.na(ames_train))
+
+```
+
+
+* * *
+
+Pool.QC is the variable with the most missing values: 997 missing values. This is because these houses do not have a pool and therefore do not have a pool quality score This tells us that 3 houses in the dataset do have a pool.
+
+
+* * *
+
+#
+
+We want to predict the natural log of the home prices. Candidate explanatory variables are lot size in square feet (Lot.Area), slope of property (Land.Slope), original construction date (Year.Built), remodel date (Year.Remod.Add), and the number of bedrooms above grade (Bedroom.AbvGr). Pick a model selection or model averaging method covered in the Specialization, and describe how this method works. Then, use this method to find the best multiple regression model for predicting the natural log of the home prices.
+
+
+```{r Q4}
+
+sub_ames <- ames_train %>%
+  dplyr::select(price, Lot.Area, Land.Slope, Year.Built, Year.Remod.Add, Bedroom.AbvGr) %>%
+  mutate(price = log(price))
+
+lm <- lm(price ~ . - price, data = sub_ames)
+
+n <- length(sub_ames$price)
+k <- log(n)
+
+ames_full_step <- stepAIC(lm, k=k, data =sub_ames)
+summary(ames_full_step)
+BIC(ames_full_step)
+
+```
+
+* * *
+
+We have started with the model including all candidate variables and used stepwise functioning to step through the model, removing variables iteratively to improve the fit. We can see that the best model is actually to include all 5 candidate variables, as they all add value to the fit and so removing any of them will weaken the fit. We could further investigate for colinearity, or if some variables have very small added value and if it would make sense to remove them for a more parsimonious model.
+
+BIC is calculated as log(n)k − 2 log(L). The preferred model is the one with the minimum BIC. Our model gives a BIC of 333.3642. 
+
+
+* * *
+
+#
+
+Which home has the largest squared residual in the previous analysis (Question 4)? Looking at all the variables in the data set, can you explain why this home stands out from the rest (what factors contribute to the high squared residual and why are those factors relevant)?
+
+
+```{r Q5}
+
+model_final <- lm(price ~ Lot.Area + Land.Slope + Year.Built + Year.Remod.Add + Bedroom.AbvGr, data = sub_ames)
+plot(model_final)
+
+x <- lm[["residuals"]]
+
+x <- sort(desc(abs(x)))
+
+x
+
+```
+
+* * *
+
+We can see in the "Residuals vs Fitted" plot that house 428 in our data has the largest squared residual, which is PID 902207130. The house sold for only 12,789. This is surprisingly low given the lot size and number of bedrooms. 
+
+* * *
+
+#
+
+Use the same model selection method you chose in Question 4 to again find the best multiple regression model to predict the natural log of home prices, but this time **replacing Lot.Area with log(Lot.Area)**. Do you arrive at a model including the same set of predictors?
+
+
+```{r Q6}
+
+sub_ames2 <- sub_ames %>%
+  mutate(Lot.Area = log(Lot.Area))
+
+lm2 <- lm(price ~ . - price, data = sub_ames2)
+
+n <- length(sub_ames$price)
+k <- log(n)
+
+ames_full_step <- stepAIC(lm2, k=k, data =sub_ames2)
+summary(ames_full_step)
+BIC(ames_full_step)
+
+```
+
+* * *
+
+Using log(Lot.Area), we arrive at a different model. The Land.Slope variable has been dropped and the fit has improved, to give a BIC of 222.1599.
+
+* * *
+
+#
+
+Do you think it is better to log transform Lot.Area, in terms of assumptions for linear regression? Make graphs of the predicted values of log home price versus the true values of log home price for the regression models selected for Lot.Area and log(Lot.Area). Referencing these two plots, provide a written support that includes a quantitative justification for your answer in the first part of question 7.
+
+```{r Q7}
+
+prediction <- predict(lm, sub_ames)
+ggplot(sub_ames,aes(prediction,price))+geom_point()+geom_smooth(method="lm")
+
+prediction2 <- predict(lm2, sub_ames2)
+ggplot(sub_ames2,aes(prediction2,price))+geom_point()+geom_smooth(method="lm")
+
+```
+
+* * *
+
+As the model with log transformed Lot.Area improves the BIC from 333.3642 to 222.1599, and improves the fit of the model, reducing the residual mean square error as can be seen in the above scatter plots, I think that log transforming Lot.Area improves the multiple regression model. 
+
+* * *
+###
